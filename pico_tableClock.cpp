@@ -69,21 +69,29 @@ inline void rtc_adjustForDay(datetime_t& t)
   {
     if (t.day > 31)
       t.day = 1;
+    if (t.day < 1)
+      t.day = 31;  
+  }  
+  else if ((t.month == 2) && !(t.year % 4))
+  {
+    if (t.day > 29)
+      t.day = 1;
+    if (t.day < 1)
+      t.day = 29;  
+  }
+  else if ((t.month == 2) && (t.year % 4))
+  {
+    if (t.day > 28)
+      t.day = 1;
+    if (t.day < 1)
+      t.day = 28;  
   }
   else
   {
     if (t.day > 30)
       t.day = 1;
-  }
-  if ((t.month == 2) && !(t.year % 4))
-  {
-    if (t.day > 29)
-      t.day = 1;
-  }
-  if ((t.month == 2) && (t.year % 4))
-  {
-    if (t.day > 28)
-      t.day = 1;
+    if (t.day < 1)
+      t.day = 30;  
   }
 }
 
@@ -120,43 +128,87 @@ void gpio_callback_gpio(uint gpio, uint32_t events)
           t.hour = t.hour + 1;
           if (t.hour > 23)
             t.hour = 0;
-          rtc_set_datetime(&t);
           break;
         case blinkMinute:
           t.min = t.min + 1;
           if (t.min > 59)
             t.min = 0;
-          rtc_set_datetime(&t);
           break;
         case blinkDay:
           t.day = t.day + 1;
           rtc_adjustForDay(t);
-          rtc_set_datetime(&t);
           break;
         case blinkMonth:
           t.month = t.month + 1;
           if (t.month > 12)
             t.month = 1;
           rtc_adjustForDay(t);
-          rtc_set_datetime(&t);
           break;
         case blinkYear:
           t.year = t.year + 1;
           if (t.year > 2050)
             t.year = 2020;
           rtc_adjustForDay(t);
-          rtc_set_datetime(&t);
           break;
         case blinkDOTW:
           t.dotw = t.dotw + 1;
           if (t.dotw > 6)
             t.dotw = 0;
-          rtc_set_datetime(&t);
           break;
         default:
           break;
         }
+        rtc_set_datetime(&t);
       }
+    }
+
+    if(!gpio_get(DOWN_PIN))
+    {
+      resetSetTimeCount();
+      if (setButtonEvent)
+      {
+        datetime_t t;
+        rtc_get_datetime(&t);
+
+        switch (blinkSelect)
+        {
+        case blinkHour:
+          t.hour = t.hour - 1;
+          if (t.hour < 0)
+            t.hour = 23;
+          break;
+        case blinkMinute:
+          t.min = t.min - 1;
+          if (t.min < 0)
+            t.min = 59;
+          break;
+        case blinkDay:
+          t.day = t.day - 1;
+          rtc_adjustForDay(t);
+          break;
+        case blinkMonth:
+          t.month = t.month - 1;
+          if (t.month < 1)
+            t.month = 12;
+          rtc_adjustForDay(t);
+          break;
+        case blinkYear:
+          t.year = t.year - 1;
+          if (t.year < 2020)
+            t.year = 2050;
+          rtc_adjustForDay(t);
+          break;
+        case blinkDOTW:
+          t.dotw = t.dotw - 1;
+          if (t.dotw < 0)
+            t.dotw = 6;
+          break;
+        default:
+          break;
+        }
+        rtc_set_datetime(&t);
+      }
+
     }
   }
 
@@ -250,7 +302,7 @@ void drawAnalogAndDigitalClock(u8g2_t u8g2, datetime_t *inputDateTime, ST7920 *i
     break;
 
   case blinkMinute:
-    u8g2_DrawBox(&u8g2, 98, 5, 23, 16);
+    u8g2_DrawBox(&u8g2, 97, 5, 23, 16);
     break;
 
   case blinkDay:
@@ -340,7 +392,7 @@ extern "C" int main()
   u8g2_SetDrawColor(&u8g2, 1);
 
   st7920.fillBitmap((uint8_t *)frameBufferPtr);
-  u8g2_SetFont(&u8g2, bdf_font);
+  //u8g2_SetFont(&u8g2, bdf_font);
 
   while (1)
   {
